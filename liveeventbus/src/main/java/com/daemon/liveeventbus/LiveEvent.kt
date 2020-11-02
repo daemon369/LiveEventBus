@@ -70,7 +70,7 @@ internal class LiveEventImpl<T> : LiveEvent<T> {
         }
         observerMap[observer] = o
         if (!sticky && liveData.value != null) {
-            val skip = liveData.skipNoInline()
+            val skip = SkipLiveData(liveData)
             liveDataMap[o] = skip
             lifecycleOwner.lifecycle.addObserver(object : LifecycleEventObserver {
                 override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
@@ -96,7 +96,7 @@ internal class LiveEventImpl<T> : LiveEvent<T> {
 
     override fun observe(lifecycleOwner: LifecycleOwner, sticky: Boolean, observer: EventObserver<T>) {
         if (!sticky && liveData.value != null) {
-            val skip = liveData.skipNoInline()
+            val skip = SkipLiveData(liveData)
             liveDataMap[observer] = skip
             lifecycleOwner.lifecycle.addObserver(object : LifecycleEventObserver {
                 override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
@@ -138,15 +138,13 @@ internal class LiveEventImpl<T> : LiveEvent<T> {
 
 }
 
-private fun <T> LiveData<T>.skipNoInline(skipCount: Int = 1): LiveData<T> {
-    val result = MediatorLiveData<T>()
-    result.addSource(this, object : Observer<T> {
-        var count = 0
-        override fun onChanged(t: T?) {
-            if (++count > skipCount) {
-                result.value = t
-            }
+private class SkipLiveData<T>(source: LiveData<T>, val skipCount: Int = 1) : MediatorLiveData<T>() {
+    private var count = 0
+
+    init {
+        addSource(source) {
+            if (count++ < skipCount) return@addSource
+            value = it
         }
-    })
-    return result
+    }
 }
