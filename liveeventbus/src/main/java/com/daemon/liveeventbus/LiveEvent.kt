@@ -15,34 +15,33 @@ interface LiveEvent<T> {
     fun observe(
             lifecycleOwner: LifecycleOwner,
             sticky: Boolean = false,
-            observe: EventObserver<T>
+            observer: EventObserver<T>
     )
 
     @MainThread
     fun observe(
             lifecycleOwner: LifecycleOwner,
-            observe: EventObserver<T>
-    ) = observe(lifecycleOwner, false, observe)
+            observer: EventObserver<T>
+    ) = observe(lifecycleOwner, false, observer)
 
     @MainThread
     fun observe(
             lifecycleOwner: LifecycleOwner,
             sticky: Boolean = false,
-            @MainThread observe: (T) -> Unit
-    ) = observe(lifecycleOwner, sticky, object : EventObserver<T>() {
-        override fun onEvent(event: T) {
-            observe(event)
-        }
-    })
+            @MainThread observer: (T) -> Unit
+    )
 
     @MainThread
     fun observe(
             lifecycleOwner: LifecycleOwner,
-            @MainThread observe: (T) -> Unit
-    ) = observe(lifecycleOwner, false, observe)
+            @MainThread observer: (T) -> Unit
+    ) = observe(lifecycleOwner, false, observer)
 
     @MainThread
     fun removeObserver(observer: EventObserver<T>)
+
+    @MainThread
+    fun removeObserver(observer: (T) -> Unit)
 
     @MainThread
     fun removeObserver(lifecycleOwner: LifecycleOwner)
@@ -54,7 +53,8 @@ interface LiveEvent<T> {
 internal class LiveEventImpl<T> : LiveEvent<T> {
 
     private val liveData = MutableLiveData<T>()
-    private val skipLiveData by lazy { liveData.skipNoInline() }
+    private val observerMap = mutableMapOf<(T) -> Unit, EventObserver<T>>()
+    private val liveDataMap = mutableMapOf<EventObserver<T>, LiveData<T>>()
 
     @SuppressLint("WrongThread")
     override fun emitEvent(event: T) {
@@ -64,21 +64,72 @@ internal class LiveEventImpl<T> : LiveEvent<T> {
             liveData.postValue(event)
     }
 
-    override fun observe(lifecycleOwner: LifecycleOwner, sticky: Boolean, observe: EventObserver<T>) {
+    override fun observe(lifecycleOwner: LifecycleOwner, sticky: Boolean, observer: (T) -> Unit) {
+        val o = object : EventObserver<T>() {
+            override fun onEvent(event: T) = observer(event)
+        }
+        observerMap[observer] = o
         if (!sticky && liveData.value != null) {
-            skipLiveData.observe(lifecycleOwner, observe)
-        } else
-            liveData.observe(lifecycleOwner, observe)
+            val skip = liveData.skipNoInline()
+            liveDataMap[o] = skip
+            lifecycleOwner.lifecycle.addObserver(object : LifecycleEventObserver {
+                override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+                    if (event == Lifecycle.Event.ON_DESTROY) {
+                        observerMap.remove(observer)?.apply {
+                            liveDataMap.remove(this)
+                        }
+                    }
+                }
+            })
+            skip.observe(lifecycleOwner, o)
+        } else {
+            liveData.observe(lifecycleOwner, o)
+            lifecycleOwner.lifecycle.addObserver(object : LifecycleEventObserver {
+                override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+                    if (event == Lifecycle.Event.ON_DESTROY) {
+                        observerMap.remove(observer)
+                    }
+                }
+            })
+        }
+    }
+
+    override fun observe(lifecycleOwner: LifecycleOwner, sticky: Boolean, observer: EventObserver<T>) {
+        if (!sticky && liveData.value != null) {
+            val skip = liveData.skipNoInline()
+            liveDataMap[observer] = skip
+            lifecycleOwner.lifecycle.addObserver(object : LifecycleEventObserver {
+                override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+                    if (event == Lifecycle.Event.ON_DESTROY) {
+                        liveDataMap.remove(observer)
+                    }
+                }
+            })
+            skip.observe(lifecycleOwner, observer)
+        } else {
+            liveData.observe(lifecycleOwner, observer)
+        }
     }
 
     override fun removeObserver(observer: EventObserver<T>) {
         liveData.removeObserver(observer)
-        skipLiveData.removeObserver(observer)
+        @Suppress("UNCHECKED_CAST")
+        liveDataMap.remove(observer)?.removeObserver(observer)
+    }
+
+    override fun removeObserver(observer: (T) -> Unit) {
+        observerMap.remove(observer)?.apply {
+            liveData.removeObserver(this)
+            liveDataMap.remove(this)?.removeObserver(this)
+        }
     }
 
     override fun removeObserver(lifecycleOwner: LifecycleOwner) {
         liveData.removeObservers(lifecycleOwner)
-        skipLiveData.removeObservers(lifecycleOwner)
+        liveDataMap.values.forEach {
+            it.removeObservers(lifecycleOwner)
+        }
+        liveDataMap.clear()
     }
 
     override fun clear() {
