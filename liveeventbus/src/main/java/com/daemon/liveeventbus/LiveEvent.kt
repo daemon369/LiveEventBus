@@ -1,5 +1,6 @@
 package com.daemon.liveeventbus
 
+import android.annotation.SuppressLint
 import android.os.Looper
 import androidx.annotation.AnyThread
 import androidx.annotation.MainThread
@@ -53,6 +54,7 @@ internal class LiveEventImpl<T> : LiveEvent<T> {
 
     private val liveData = MutableLiveData<T>()
 
+    @SuppressLint("WrongThread")
     override fun emitEvent(event: T) {
         if (Looper.getMainLooper().thread == Thread.currentThread())
             liveData.setValue(event)
