@@ -21,24 +21,25 @@ interface LiveEvent<T> {
     @MainThread
     fun observe(
             lifecycleOwner: LifecycleOwner,
-            sticky: Boolean = false,
-            @MainThread observe: (T) -> Unit
-    ) {
-        observe(lifecycleOwner, sticky, object : EventObserver<T>() {
-            override fun onEvent(event: T) {
-                observe(event)
-            }
-        })
-    }
+            observe: EventObserver<T>
+    ) = observe(lifecycleOwner, false, observe)
 
     @MainThread
-    fun observe(lifecycleOwner: LifecycleOwner, @MainThread observe: (T) -> Unit) {
-        observe(lifecycleOwner, false, object : EventObserver<T>() {
-            override fun onEvent(event: T) {
-                observe(event)
-            }
-        })
-    }
+    fun observe(
+            lifecycleOwner: LifecycleOwner,
+            sticky: Boolean = false,
+            @MainThread observe: (T) -> Unit
+    ) = observe(lifecycleOwner, sticky, object : EventObserver<T>() {
+        override fun onEvent(event: T) {
+            observe(event)
+        }
+    })
+
+    @MainThread
+    fun observe(
+            lifecycleOwner: LifecycleOwner,
+            @MainThread observe: (T) -> Unit
+    ) = observe(lifecycleOwner, false, observe)
 
     @MainThread
     fun removeObserver(observer: EventObserver<T>)
@@ -53,6 +54,7 @@ interface LiveEvent<T> {
 internal class LiveEventImpl<T> : LiveEvent<T> {
 
     private val liveData = MutableLiveData<T>()
+    private val skipLiveData by lazy { liveData.skipNoInline() }
 
     @SuppressLint("WrongThread")
     override fun emitEvent(event: T) {
@@ -63,18 +65,20 @@ internal class LiveEventImpl<T> : LiveEvent<T> {
     }
 
     override fun observe(lifecycleOwner: LifecycleOwner, sticky: Boolean, observe: EventObserver<T>) {
-        if (!sticky && liveData.value != null)
-            (liveData.skipNoInline(1) as MutableLiveData<T>).observe(lifecycleOwner, observe)
-        else
+        if (!sticky && liveData.value != null) {
+            skipLiveData.observe(lifecycleOwner, observe)
+        } else
             liveData.observe(lifecycleOwner, observe)
     }
 
     override fun removeObserver(observer: EventObserver<T>) {
         liveData.removeObserver(observer)
+        skipLiveData.removeObserver(observer)
     }
 
     override fun removeObserver(lifecycleOwner: LifecycleOwner) {
         liveData.removeObservers(lifecycleOwner)
+        skipLiveData.removeObservers(lifecycleOwner)
     }
 
     override fun clear() {
@@ -83,7 +87,7 @@ internal class LiveEventImpl<T> : LiveEvent<T> {
 
 }
 
-fun <T> LiveData<T>.skipNoInline(skipCount: Int = 1): LiveData<T> {
+private fun <T> LiveData<T>.skipNoInline(skipCount: Int = 1): LiveData<T> {
     val result = MediatorLiveData<T>()
     result.addSource(this, object : Observer<T> {
         var count = 0

@@ -28,7 +28,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
         send1.setOnClickListener { LiveEventBus.emit(MainActivityEvent) }
-        reg1.setOnClickListener { LiveEventBus.with(MainActivityEvent::class.java).observe(this, false, ob1) }
+        reg1.setOnClickListener { LiveEventBus.with(MainActivityEvent::class.java).observe(this, ob1) }
         ureg1.setOnClickListener { LiveEventBus.with(MainActivityEvent::class.java).removeObserver(ob1) }
 
         val ob2 = object : EventObserver<FirstFragmentEvent>() {
@@ -37,7 +37,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
         send2.setOnClickListener { LiveEventBus.emit(FirstFragmentEvent) }
-        reg2.setOnClickListener { LiveEventBus.with(FirstFragmentEvent::class.java).observe(this, false, ob2) }
+        reg2.setOnClickListener { LiveEventBus.with(FirstFragmentEvent::class.java).observe(this, ob2) }
         ureg2.setOnClickListener { LiveEventBus.with(FirstFragmentEvent::class.java).removeObserver(ob2) }
 
         val ob3 = object : EventObserver<SecondFragmentEvent>() {
@@ -46,7 +46,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
         send3.setOnClickListener { LiveEventBus.emit(SecondFragmentEvent) }
-        reg3.setOnClickListener { LiveEventBus.with(SecondFragmentEvent::class.java).observe(this, false, ob3) }
+        reg3.setOnClickListener { LiveEventBus.with(SecondFragmentEvent::class.java).observe(this, ob3) }
         ureg3.setOnClickListener { LiveEventBus.with(SecondFragmentEvent::class.java).removeObserver(ob3) }
     }
 }

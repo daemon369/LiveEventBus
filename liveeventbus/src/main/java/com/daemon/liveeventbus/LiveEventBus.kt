@@ -1,7 +1,6 @@
 package com.daemon.liveeventbus
 
 import androidx.annotation.AnyThread
-import androidx.annotation.NonNull
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 
@@ -28,9 +27,5 @@ object LiveEventBus {
 
     inline fun <reified T : Any> emit(event: T) =
             with(event.javaClass).emitEvent(event)
-
-    inline fun <reified T : Any> LiveEventBus.emitEvent(@NonNull event: T) =
-            @Suppress("UNCHECKED_CAST")
-            with(event::class.java as Class<T>).emitEvent(event)
 
 }
