@@ -1,26 +1,16 @@
 package com.daemon.liveeventbus.demo
 
 import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
+import android.view.View
+import androidx.fragment.app.Fragment
 import com.daemon.liveeventbus.EventObserver
 import com.daemon.liveeventbus.LiveEventBus
-import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.fragment_second.*
 
-class MainActivity : AppCompatActivity() {
+class SecondFragment : Fragment(R.layout.fragment_second) {
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-
-        supportFragmentManager
-                .beginTransaction()
-                .add(R.id.fragment1, FirstFragment())
-                .commit()
-
-        supportFragmentManager
-                .beginTransaction()
-                .add(R.id.fragment2, SecondFragment())
-                .commit()
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
         val ob1 = object : EventObserver<MainActivityEvent>() {
             override fun onEvent(event: MainActivityEvent) {
@@ -49,4 +39,5 @@ class MainActivity : AppCompatActivity() {
         reg3.setOnClickListener { LiveEventBus.with(SecondFragmentEvent::class.java).observe(this, false, ob3) }
         ureg3.setOnClickListener { LiveEventBus.with(SecondFragmentEvent::class.java).removeObserver(ob3) }
     }
+
 }
