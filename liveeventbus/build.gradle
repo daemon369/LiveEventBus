@@ -1,3 +1,7 @@
+plugins {
+    id 'com.jfrog.bintray' version '1.8.5'
+}
+
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
@@ -45,3 +49,59 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
 
 }
+
+
+ext {
+    pub = [
+            group   : 'me.daemon',
+            artifact: 'liveeventbus',
+            version : '1.0.0'
+    ]
+
+    bintrayRepo = 'maven'
+    bintrayName = 'liveeventbus'
+
+    bintrayOverride = false
+
+    libraryName = 'LiveEventBus'
+
+    libraryDescription = 'EventBus based on LiveData'
+
+    siteUrl = 'https://github.com/daemon369/LiveEventBus'
+    gitUrl = 'https://github.com/daemon369/LiveEventBus.git'
+
+    developerId = 'daemon369'
+    developerName = 'daemon369'
+    developerEmail = 'daemon336699@gmail.com'
+
+    licenseName = 'The Apache Software License, Version 2.0'
+    licenseUrl = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+    allLicenses = ["Apache-2.0"]
+}
+
+apply from: 'https://gist.githubusercontent.com/daemon369/68181149e12655300101ea9565679403/raw/b4770d9fc7df05224f57d2521366b7c78771be9f/AndroidPublishToMavenAndBintray'
+
+bintray {
+    override = bintrayOverride
+}
+
+//apply plugin: 'maven'
+//
+//task sourceJar(type: Jar) {
+//    archiveClassifier.set('sources')
+//    from android.sourceSets.main.java.srcDirs
+//}
+//artifacts {
+//    archives sourceJar
+//}
+//
+//uploadArchives {
+//    repositories {
+//        mavenDeployer {
+//            pom.groupId = pub.group
+//            pom.artifactId = pub.artifact
+//            pom.version = pub.version
+//            repository(url: uri("${System.getProperty("user.home")}/repo"))
+//        }
+//    }
+//}
